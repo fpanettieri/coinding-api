@@ -9,8 +9,8 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-    rtr.HandleFunc("/raw/", 	baseHandler)
-    rtr.HandleFunc("/raw/data", dataHandler)
+    rtr.HandleFunc("/raw/",       baseHandler)
+    rtr.HandleFunc("/raw/notify", notifyHandler)
 
     http.Handle("/raw/", rtr)
 }
@@ -20,7 +20,7 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Fprint(w, r.URL.Path)
 }
 
-func dataHandler(w http.ResponseWriter, r *http.Request) {
+func notifyHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
     /* TODO: log received data? */
 }
