@@ -1,0 +1,9 @@
+application: coinding-v4
+module: raw
+version: 0
+runtime: go
+api_version: go1
+
+handlers:
+- url: /raw/.*
+  script: _go_app
