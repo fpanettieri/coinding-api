@@ -3,56 +3,10 @@ package raw_address
 import (
 	"fmt"
 	"net/http"
-	"net/url"
-	"io/ioutil"
-	"log"
 
 	"github.com/gorilla/mux"
-
-	"appengine"
-    "appengine/urlfetch"
+	"github.com/fpanettieri/chain-go"
 )
-
-///-- CHAIN.COM Library
-
-const API_KEY = "7e72affc260a0e1d1f13a5a01f3d64e0"
-const BASE_URL = "https://api.chain.com/v2/bitcoin/"
-
-func chainUrl(path string) string {
-	params := url.Values{}
-	return chainUrlParams(path, params)
-}
-
-func chainUrlParams(path string, params url.Values) string {
-	params.Add("api-key-id", API_KEY)
-	return fmt.Sprintf("%s%s?%s", BASE_URL, path, params.Encode())
-}
-
-func forwardRequest(url string, w http.ResponseWriter, r *http.Request){
-	c := appengine.NewContext(r)
-	client := urlfetch.Client(c)
-
-	resp, err := client.Get(url)
-    if err != nil {
-    	log.Fatal(err)
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-    
-    defer resp.Body.Close()
-
-    bodyBytes, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		log.Fatal(err)
-        http.Error(w, readErr.Error(), http.StatusInternalServerError)
-        return
-    }
-
-    w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, string(bodyBytes))
-}
-
-///!- CHAIN.COM Library
 
 func init() {
 	rtr := mux.NewRouter()
@@ -72,25 +26,25 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func randomHandler(w http.ResponseWriter, r *http.Request) {
-	url := chainUrl(fmt.Sprintf("%s/%s", "addresses", "17x23dNjXJLzGMev6R63uyRhMWP1VHawKc"))
-	forwardRequest(url, w, r)
+	url := chain.ChainUrl(fmt.Sprintf("%s/%s", "addresses", "17x23dNjXJLzGMev6R63uyRhMWP1VHawKc"), CHAIN_KEY)
+	chain.ForwardRequest(url, w, r)
 }
 
 func addressHandler(w http.ResponseWriter, r *http.Request) { 
 	params := mux.Vars(r)
-	url := chainUrl(fmt.Sprintf("%s/%s", "addresses", params["hash"]))
-	forwardRequest(url, w, r)
+	url := chain.ChainUrl(fmt.Sprintf("%s/%s", "addresses", params["hash"]), CHAIN_KEY)
+	chain.ForwardRequest(url, w, r)
 }
 
 func transactionsHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	url := chainUrl(fmt.Sprintf("%s/%s/transactions", "addresses", params["hash"]))
-	forwardRequest(url, w, r)
+	url := chain.ChainUrl(fmt.Sprintf("%s/%s/transactions", "addresses", params["hash"]), CHAIN_KEY)
+	chain.ForwardRequest(url, w, r)
 }
 
 func unspentsHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	url := chainUrl(fmt.Sprintf("%s/%s/unspents", "addresses", params["hash"]))
-	forwardRequest(url, w, r)
+	url := chain.ChainUrl(fmt.Sprintf("%s/%s/unspents", "addresses", params["hash"]), CHAIN_KEY)
+	chain.ForwardRequest(url, w, r)
 }
