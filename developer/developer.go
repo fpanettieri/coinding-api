@@ -22,6 +22,7 @@ func init() {
 	rtr.HandleFunc("/developer/register", 		registerHandler)
 	rtr.HandleFunc("/developer/balance", 		balanceHandler)
 	rtr.HandleFunc("/developer/deposit", 		depositHandler)
+	rtr.HandleFunc("/developer/withdraw", 		withdrawHandler)
 	rtr.HandleFunc("/developer/coinbase", 		coinbaseHandler)
 
 	http.Handle("/developer/", rtr)
@@ -88,8 +89,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, dataErr.Error(), http.StatusInternalServerError)
         return
     }
-
-	
 }
 
 func authDev(w http.ResponseWriter, r *http.Request, ctx appengine.Context, dev *Developer) bool {
