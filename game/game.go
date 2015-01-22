@@ -1,9 +1,13 @@
 package game
 
 import (
-	"github.com/gorilla/mux"
 	"fmt"
 	"net/http"
+
+	"github.com/gorilla/mux"
+
+	"appengine"
+    "appengine/datastore"
 )
 
 func init() {
@@ -12,9 +16,6 @@ func init() {
 	rtr.HandleFunc("/game/", 		 						baseHandler)
 	rtr.HandleFunc("/game/all",								allHandler)
 	rtr.HandleFunc("/game/new",								newHandler)
-	rtr.HandleFunc("/game/{id:[A-Za-z0-9_]+}",				getHandler)
-	rtr.HandleFunc("/game/{id:[A-Za-z0-9_]+}/players",		playersHandler)
-	rtr.HandleFunc("/game/{id:[A-Za-z0-9_]+}/players/add",	addPlayerHandler)
 
 	http.Handle("/game/", rtr)
 }
@@ -30,21 +31,25 @@ func allHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func newHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
-}
+	ctx := appengine.NewContext(r)
 
-func getHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
-}
+	// Check email
+	name := r.FormValue("name")
+	dev := r.FormValue("dev")
+	url := r.FormValue("url")
 
-func playersHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
-}
+	// Create record
+	game := &Game{
+        Name: name,
+        Developer: dev,
+        Url: url,
+    }
 
-func addPlayerHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+    // Store new developer
+	key := datastore.NewKey(ctx, "Game", "", 0, nil)
+	_, dataErr := datastore.Put(ctx, key, game)
+	if dataErr != nil {
+        http.Error(w, dataErr.Error(), http.StatusInternalServerError)
+        return
+    }
 }

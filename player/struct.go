@@ -1,7 +1,7 @@
 package player
 
 type Player struct {
-    Handle		string
+    Email		string
     Pass		[]byte
     Address		string
     Balance		float64

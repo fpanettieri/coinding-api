@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -20,7 +21,7 @@ func init() {
 	rtr.HandleFunc("/developer/", 				baseHandler)
 	rtr.HandleFunc("/developer/register", 		registerHandler)
 	rtr.HandleFunc("/developer/balance", 		balanceHandler)
-	rtr.HandleFunc("/developer/requestMoney", 	requestMoneyHandler)
+	rtr.HandleFunc("/developer/deposit", 		depositHandler)
 	rtr.HandleFunc("/developer/coinbase", 		coinbaseHandler)
 
 	http.Handle("/developer/", rtr)
@@ -123,7 +124,7 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "{email: %s, balance: %f}", dev.Email, dev.Balance)
 }
 
-func requestMoneyHandler(w http.ResponseWriter, r *http.Request) {
+func depositHandler(w http.ResponseWriter, r *http.Request) {
 	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
 	depositParams := coinbase.TransactionParams{ To: r.FormValue("email"), From: "api@coinding.com", Amount: r.FormValue("amount") }
 	_, err := coinbs.RequestMoney(&depositParams)
@@ -133,6 +134,50 @@ func requestMoneyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+func withdrawHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	var dev Developer
+	if !authDev(w, r, ctx, &dev) { return }
+
+	amount, parseErr := strconv.ParseFloat(r.FormValue("amount"), 64)
+	if parseErr != nil {
+        http.Error(w, parseErr.Error(), http.StatusInternalServerError)
+        return
+    }
+
+	if(dev.Balance < amount){ amount = dev.Balance }
+
+	if(amount <= 0){
+		http.Error(w, "Insufficient funds", http.StatusPaymentRequired)
+  		return
+	}
+	
+	// FIXME: using only a base64 looks bad, but we need to get this out fast
+    stringId := base64.StdEncoding.EncodeToString([]byte("dev-" + dev.Email))
+	dev.Balance = dev.Balance - amount
+
+	// Store new developer
+	key := datastore.NewKey(ctx, "Developer", stringId, 0, nil)
+	_, dataErr := datastore.Put(ctx, key, dev)
+	if dataErr != nil {
+        http.Error(w, dataErr.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Withdraw money
+    amountStr := strconv.FormatFloat(amount, 'f', 8, 64)
+	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
+	depositParams := coinbase.TransactionParams{ To: r.FormValue("destination"), From: dev.Email, Amount: amountStr, Notes: "Sent via Coinding" }
+
+	_, err := coinbs.SendMoney(&depositParams)
+	
+	if err != nil {
+  		http.Error(w, err.Error(), http.StatusInternalServerError)
+  		return
+	}
+}
 
 func coinbaseHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

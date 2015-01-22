@@ -1,20 +1,29 @@
 package player
 
 import (
-	"github.com/gorilla/mux"
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strconv"
+
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/gorilla/mux"
+	"github.com/fabioberger/coinbase-go"
+
+	"appengine"
+    "appengine/datastore"
 )
 
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/player/", 		 		            baseHandler)
-	rtr.HandleFunc("/player/register",                  registerHandler)
-	rtr.HandleFunc("/player/login",                     loginHandler)
-	rtr.HandleFunc("/player/guest",                     guestHandler)
-	rtr.HandleFunc("/player/{id:[A-Za-z0-9_]+}",        getHandler)
-	rtr.HandleFunc("/player/{id:[A-Za-z0-9_]+}/bits",	bitsHandler)
+	rtr.HandleFunc("/player/", 				baseHandler)
+	rtr.HandleFunc("/player/register", 		registerHandler)
+	rtr.HandleFunc("/player/balance", 		balanceHandler)
+	rtr.HandleFunc("/player/deposit", 		depositHandler)
+	rtr.HandleFunc("/player/withdraw", 		withdrawHandler)
+	rtr.HandleFunc("/player/coinbase", 		coinbaseHandler)
 
 	http.Handle("/player/", rtr)
 }
@@ -24,27 +33,151 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, r.URL.Path)
 }
 
+func emailUsed(w http.ResponseWriter, ctx appengine.Context, email string) bool {
+	count, err := datastore.NewQuery("Player").Filter("Email =", email).KeysOnly().Count(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	return count > 0
+}
+
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+	ctx := appengine.NewContext(r)
+
+	// Check email
+	email := r.FormValue("email")
+  	if emailUsed(w, ctx, email) {
+  		http.Error(w, "Email already used", http.StatusInternalServerError)
+		return
+  	}
+
+  	// Encrypt pass
+  	pass, passErr := bcrypt.GenerateFromPassword([]byte(r.FormValue("pass")), 10);
+  	if passErr != nil {
+  		http.Error(w, passErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Create record
+	player := &Player{
+        Email: email,
+        Pass: pass,
+        Balance: 0,
+    }
+
+    // FIXME: using only a base64 looks bad, but we need to get this out fast
+    stringId := base64.StdEncoding.EncodeToString([]byte("player-" + email))
+
+	// Configure coinbase api
+	callbackUrl := "http://api.coinding.com/player/coinbase?id=" + stringId
+	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
+	addressParams := coinbase.AddressParams{ Label: "Player address", CallbackUrl: callbackUrl }
+	
+	// Update developer bitcoin address
+	address, addressErr := coinbs.GenerateReceiveAddress(&addressParams)
+	if addressErr == nil {
+		player.Address = address
+	} else {
+		http.Error(w, addressErr.Error(), http.StatusInternalServerError)
+        return
+	}
+
+	// Store new developer
+	key := datastore.NewKey(ctx, "Player", stringId, 0, nil)
+	_, dataErr := datastore.Put(ctx, key, player)
+	if dataErr != nil {
+        http.Error(w, dataErr.Error(), http.StatusInternalServerError)
+        return
+    }
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+func authPlayer(w http.ResponseWriter, r *http.Request, ctx appengine.Context, player *Player) bool {
+	// Prepare params
+	email := r.FormValue("email")
+  	pass := []byte(r.FormValue("pass"))
+	stringId := base64.StdEncoding.EncodeToString([]byte("player-" + email))
+	key := datastore.NewKey(ctx, "Player", stringId, 0, nil)
+
+	// Retrieve developer
+	if getErr := datastore.Get(ctx, key, player); getErr != nil {
+        http.Error(w, getErr.Error(), http.StatusUnauthorized)
+        return false
+    }
+
+	// Compare pass
+	compareErr := bcrypt.CompareHashAndPassword(player.Pass, pass)
+	if compareErr != nil {
+  		http.Error(w, "Invalid email or pass", http.StatusUnauthorized)
+		return false
+	}
+
+	return true
 }
 
-func guestHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+func balanceHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	var player Player
+	if !authPlayer(w, r, ctx, &player) { return }
+	
+	fmt.Fprintf(w, "{email: %s, balance: %f}", player.Email, player.Balance)
 }
 
-func getHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+func depositHandler(w http.ResponseWriter, r *http.Request) {
+	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
+	depositParams := coinbase.TransactionParams{ To: r.FormValue("email"), From: "api@coinding.com", Amount: r.FormValue("amount"), Notes: "Sent via Coinding" }
+	_, err := coinbs.RequestMoney(&depositParams)
+	
+	if err != nil {
+  		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
-func bitsHandler(w http.ResponseWriter, r *http.Request) {
+func withdrawHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	var player Player
+	if !authPlayer(w, r, ctx, &player) { return }
+
+	amount, parseErr := strconv.ParseFloat(r.FormValue("amount"), 64)
+	if parseErr != nil {
+        http.Error(w, parseErr.Error(), http.StatusInternalServerError)
+        return
+    }
+
+	if(player.Balance < amount){ amount = player.Balance }
+
+	if(amount <= 0){
+		http.Error(w, "Insufficient funds", http.StatusPaymentRequired)
+  		return
+	}
+	
+	// FIXME: using only a base64 looks bad, but we need to get this out fast
+    stringId := base64.StdEncoding.EncodeToString([]byte("player-" + player.Email))
+	player.Balance = player.Balance - amount
+
+	// Store new developer
+	key := datastore.NewKey(ctx, "Player", stringId, 0, nil)
+	_, dataErr := datastore.Put(ctx, key, player)
+	if dataErr != nil {
+        http.Error(w, dataErr.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Withdraw money
+    amountStr := strconv.FormatFloat(amount, 'f', 8, 64)
+	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
+	depositParams := coinbase.TransactionParams{ To: r.FormValue("destination"), From: player.Email, Amount: amountStr, Notes: "Sent via Coinding" }
+
+	_, err := coinbs.SendMoney(&depositParams)
+	
+	if err != nil {
+  		http.Error(w, err.Error(), http.StatusInternalServerError)
+  		return
+	}
+}
+
+func coinbaseHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 	fmt.Fprint(w, r.URL.Path)
 }
