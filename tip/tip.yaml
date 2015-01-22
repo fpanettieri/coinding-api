@@ -1,9 +1,9 @@
 application: coinding-v4
-module: bitcoin
+module: tip
 version: 0
 runtime: go
 api_version: go1
 
 handlers:
-- url: /bitcoin/.*
+- url: /tip/.*
   script: _go_app

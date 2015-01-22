@@ -33,7 +33,6 @@ func allHandler(w http.ResponseWriter, r *http.Request) {
 func newHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
-	// Check email
 	name := r.FormValue("name")
 	dev := r.FormValue("dev")
 	url := r.FormValue("url")

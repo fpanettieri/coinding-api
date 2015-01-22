@@ -33,8 +33,8 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, r.URL.Path)
 }
 
-func emailUsed(w http.ResponseWriter, ctx appengine.Context, email string) bool {
-	count, err := datastore.NewQuery("Player").Filter("Email =", email).KeysOnly().Count(ctx)
+func nameUsed(w http.ResponseWriter, ctx appengine.Context, name string) bool {
+	count, err := datastore.NewQuery("Player").Filter("Name =", name).KeysOnly().Count(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -44,10 +44,10 @@ func emailUsed(w http.ResponseWriter, ctx appengine.Context, email string) bool 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
-	// Check email
-	email := r.FormValue("email")
-  	if emailUsed(w, ctx, email) {
-  		http.Error(w, "Email already used", http.StatusInternalServerError)
+	// Check name
+	name := r.FormValue("name")
+  	if nameUsed(w, ctx, name) {
+  		http.Error(w, "Name already used", http.StatusInternalServerError)
 		return
   	}
 
@@ -60,13 +60,13 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create record
 	player := &Player{
-        Email: email,
+        Name: name,
         Pass: pass,
         Balance: 0,
     }
 
     // FIXME: using only a base64 looks bad, but we need to get this out fast
-    stringId := base64.StdEncoding.EncodeToString([]byte("player-" + email))
+    stringId := base64.StdEncoding.EncodeToString([]byte("player-" + name))
 
 	// Configure coinbase api
 	callbackUrl := "http://api.coinding.com/player/coinbase?id=" + stringId
@@ -93,9 +93,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 func authPlayer(w http.ResponseWriter, r *http.Request, ctx appengine.Context, player *Player) bool {
 	// Prepare params
-	email := r.FormValue("email")
+	name := r.FormValue("name")
   	pass := []byte(r.FormValue("pass"))
-	stringId := base64.StdEncoding.EncodeToString([]byte("player-" + email))
+	stringId := base64.StdEncoding.EncodeToString([]byte("player-" + name))
 	key := datastore.NewKey(ctx, "Player", stringId, 0, nil)
 
 	// Retrieve developer
@@ -107,7 +107,7 @@ func authPlayer(w http.ResponseWriter, r *http.Request, ctx appengine.Context, p
 	// Compare pass
 	compareErr := bcrypt.CompareHashAndPassword(player.Pass, pass)
 	if compareErr != nil {
-  		http.Error(w, "Invalid email or pass", http.StatusUnauthorized)
+  		http.Error(w, "Invalid name or pass", http.StatusUnauthorized)
 		return false
 	}
 
@@ -120,12 +120,12 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 	var player Player
 	if !authPlayer(w, r, ctx, &player) { return }
 	
-	fmt.Fprintf(w, "{email: %s, balance: %f}", player.Email, player.Balance)
+	fmt.Fprintf(w, "{name: %s, balance: %f}", player.Name, player.Balance)
 }
 
 func depositHandler(w http.ResponseWriter, r *http.Request) {
 	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
-	depositParams := coinbase.TransactionParams{ To: r.FormValue("email"), From: "api@coinding.com", Amount: r.FormValue("amount"), Notes: "Sent via Coinding" }
+	depositParams := coinbase.TransactionParams{ To: r.FormValue("name"), From: "api@coinding.com", Amount: r.FormValue("amount"), Notes: "Sent via Coinding" }
 	_, err := coinbs.RequestMoney(&depositParams)
 	
 	if err != nil {
@@ -153,7 +153,7 @@ func withdrawHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// FIXME: using only a base64 looks bad, but we need to get this out fast
-    stringId := base64.StdEncoding.EncodeToString([]byte("player-" + player.Email))
+    stringId := base64.StdEncoding.EncodeToString([]byte("player-" + player.Name))
 	player.Balance = player.Balance - amount
 
 	// Store new developer
@@ -167,7 +167,7 @@ func withdrawHandler(w http.ResponseWriter, r *http.Request) {
     // Withdraw money
     amountStr := strconv.FormatFloat(amount, 'f', 8, 64)
 	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
-	depositParams := coinbase.TransactionParams{ To: r.FormValue("destination"), From: player.Email, Amount: amountStr, Notes: "Sent via Coinding" }
+	depositParams := coinbase.TransactionParams{ To: r.FormValue("destination"), From: player.Name, Amount: amountStr, Notes: "Sent via Coinding" }
 
 	_, err := coinbs.SendMoney(&depositParams)
 	
