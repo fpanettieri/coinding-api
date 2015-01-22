@@ -1,7 +1,7 @@
-package developer
+package player
 
-type Developer struct {
-    Email		string
+type Player struct {
+    Handle		string
     Pass		[]byte
     Address		string
     Balance		float64

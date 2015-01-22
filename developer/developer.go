@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -18,12 +17,11 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/developer/", 			baseHandler)
-	rtr.HandleFunc("/developer/register", 	registerHandler)
-	rtr.HandleFunc("/developer/validate", 	validateHandler)
-	rtr.HandleFunc("/developer/auth", 		authHandler)
-	rtr.HandleFunc("/developer/games", 		gamesHandler)
-	rtr.HandleFunc("/developer/deposit", 	depositHandler)
+	rtr.HandleFunc("/developer/", 				baseHandler)
+	rtr.HandleFunc("/developer/register", 		registerHandler)
+	rtr.HandleFunc("/developer/balance", 		balanceHandler)
+	rtr.HandleFunc("/developer/requestMoney", 	requestMoneyHandler)
+	rtr.HandleFunc("/developer/coinbase", 		coinbaseHandler)
 
 	http.Handle("/developer/", rtr)
 }
@@ -33,17 +31,20 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, r.URL.Path)
 }
 
-func emailUsed(email string) bool {
-	// TODO: validate email has not been used already
-	return false
+func emailUsed(w http.ResponseWriter, ctx appengine.Context, email string) bool {
+	count, err := datastore.NewQuery("Developer").Filter("Email =", email).KeysOnly().Count(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	return count > 0
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
-	// Encrypt email
+	// Check email
 	email := r.FormValue("email")
-  	if emailUsed(email) {
+  	if emailUsed(w, ctx, email) {
   		http.Error(w, "Email already used", http.StatusInternalServerError)
 		return
   	}
@@ -59,7 +60,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	developer := &Developer{
         Email: email,
         Pass:  pass,
-        Auth:  time.Now(),
         Balance: 0,
     }
 
@@ -67,7 +67,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
     stringId := base64.StdEncoding.EncodeToString([]byte("dev-" + email))
 
 	// Configure coinbase api
-	callbackUrl := "http://api.coinding.com/developer/" + stringId + "/deposit"
+	callbackUrl := "http://api.coinding.com/developer/coinbase?id=" + stringId
 	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
 	addressParams := coinbase.AddressParams{ Label: "Developer address", CallbackUrl: callbackUrl }
 	
@@ -88,31 +88,53 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-	// Debug data
-	fmt.Fprintf(w, "Developer email is %s\n", email)
-	fmt.Fprintf(w, "Developer pass is %s\n", pass)
-	fmt.Fprintf(w, "Developer key is %s\n", key.StringID())
-	fmt.Fprintf(w, "Callback url is %s\n", callbackUrl)
-
-	fmt.Fprintf(w, "Developer address is %s", address)
+	
 }
 
-func validateHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+func authDev(w http.ResponseWriter, r *http.Request, ctx appengine.Context, dev *Developer) bool {
+	// Prepare params
+	email := r.FormValue("email")
+  	pass := []byte(r.FormValue("pass"))
+	stringId := base64.StdEncoding.EncodeToString([]byte("dev-" + email))
+	key := datastore.NewKey(ctx, "Developer", stringId, 0, nil)
+
+	// Retrieve developer
+	if getErr := datastore.Get(ctx, key, dev); getErr != nil {
+        http.Error(w, getErr.Error(), http.StatusUnauthorized)
+        return false
+    }
+
+	// Compare pass
+	compareErr := bcrypt.CompareHashAndPassword(dev.Pass, pass)
+	if compareErr != nil {
+  		http.Error(w, "Invalid email or pass", http.StatusUnauthorized)
+		return false
+	}
+
+	return true
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+func balanceHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	var dev Developer
+	if !authDev(w, r, ctx, &dev) { return }
+	
+	fmt.Fprintf(w, "{email: %s, balance: %f}", dev.Email, dev.Balance)
 }
 
-func gamesHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+func requestMoneyHandler(w http.ResponseWriter, r *http.Request) {
+	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
+	depositParams := coinbase.TransactionParams{ To: r.FormValue("email"), From: "api@coinding.com", Amount: r.FormValue("amount") }
+	_, err := coinbs.RequestMoney(&depositParams)
+	
+	if err != nil {
+  		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
-func depositHandler(w http.ResponseWriter, r *http.Request) {
+
+func coinbaseHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 	fmt.Fprint(w, r.URL.Path)
 }
