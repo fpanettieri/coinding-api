@@ -86,6 +86,14 @@ Adds a new game to the network
 # Group Player
 These services allow you to manage a gamer account.
 
+## List Player [/player]
+### Get all Players [GET]
+Returns a list with the name of registered players.
++ Response 200 (application/json)
+
+        [{name: Roman Bareck},{name: Eric Chahi},{name: Ralph Baer},{name: Ron Gilbert},{name: Steve Feak},{name: Team Meat},{name: Yuji Horii}]
+
+
 ## Register Player [/player/register{?name,pass}]
 ### Create new Player [POST]
 Creates a new player account
