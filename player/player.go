@@ -29,8 +29,22 @@ func init() {
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusBadRequest)
-	fmt.Fprint(w, r.URL.Path)
+	c := appengine.NewContext(r)
+
+    q := datastore.NewQuery("Player").Project("Name")
+
+	var players []Player
+	if _, getErr := q.GetAll(c, &players); getErr != nil {
+  		http.Error(w, getErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(w, "[")
+	for i, p := range players {
+        fmt.Fprintf(w, "{name: %s}", p.Name)
+        if(i < len(players) - 1){ fmt.Fprint(w, ",")}
+	}
+	fmt.Fprint(w, "]")
 }
 
 func nameUsed(w http.ResponseWriter, ctx appengine.Context, name string) bool {

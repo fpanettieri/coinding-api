@@ -1,4 +1,4 @@
-package raw
+package bitcoin
 
 import (
   "github.com/gorilla/mux"
@@ -9,10 +9,10 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-    rtr.HandleFunc("/raw/",       baseHandler)
-    rtr.HandleFunc("/raw/notify", notifyHandler)
+    rtr.HandleFunc("/bitcoin/",       baseHandler)
+    rtr.HandleFunc("/bitcoin/notify", notifyHandler)
 
-    http.Handle("/raw/", rtr)
+    http.Handle("/bitcoin/", rtr)
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {

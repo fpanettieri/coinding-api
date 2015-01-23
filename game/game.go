@@ -13,21 +13,29 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/game/", 		 						baseHandler)
-	rtr.HandleFunc("/game/all",								allHandler)
-	rtr.HandleFunc("/game/new",								newHandler)
+	rtr.HandleFunc("/game/",	baseHandler)
+	rtr.HandleFunc("/game/new",	newHandler)
 
 	http.Handle("/game/", rtr)
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusBadRequest)
-	fmt.Fprint(w, r.URL.Path)
-}
+	c := appengine.NewContext(r)
 
-func allHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, r.URL.Path)
+    q := datastore.NewQuery("Game")
+
+	var games []Game
+	if _, getErr := q.GetAll(c, &games); getErr != nil {
+  		http.Error(w, getErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(w, "[")
+	for i, g := range games {
+        fmt.Fprintf(w, "{name: %s, dev: %s, url: %s}", g.Name, g.Developer, g.Url)
+        if(i < len(games) - 1){ fmt.Fprint(w, ",")}
+	}
+	fmt.Fprint(w, "]")
 }
 
 func newHandler(w http.ResponseWriter, r *http.Request) {

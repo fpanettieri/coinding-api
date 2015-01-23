@@ -106,7 +106,7 @@ func tipDevHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !authPlayer(w, r, ctx) { return }
 
-	// Validate p1 can send the tip
+	// Validate player can send the tip
 	var player Player
 	playerId := base64.StdEncoding.EncodeToString([]byte("player-" + r.FormValue("name")))
 	playerKey := datastore.NewKey(ctx, "Player", playerId, 0, nil)
@@ -129,15 +129,24 @@ func tipDevHandler(w http.ResponseWriter, r *http.Request) {
   		return
 	}
 
-	// Prepare p2
-	var dev Developer
-	devId := base64.StdEncoding.EncodeToString([]byte("dev-" + r.FormValue("to")))
-	devKey := datastore.NewKey(ctx, "Developer", devId, 0, nil)
+	// Prepare developer
+	devName := r.FormValue("to")
+	q := datastore.NewQuery("Developer").Filter("Name =", devName)
+	
+	var devs []Developer
+	keys, getErr := q.GetAll(ctx, &devs)
+	if getErr != nil {
+  		http.Error(w, getErr.Error(), http.StatusBadRequest)
+		return
+	}
 
-	if getErr := datastore.Get(ctx, devKey, &dev); getErr != nil {
-        http.Error(w, getErr.Error(), http.StatusUnauthorized)
-        return
-    }
+	if(len(devs) < 1){
+		http.Error(w, "Developer not found", http.StatusInternalServerError)
+		return
+	}
+
+	dev := devs[0]
+	devKey := keys[0]
 
     // Make the transaction
     player.Balance = player.Balance - amount

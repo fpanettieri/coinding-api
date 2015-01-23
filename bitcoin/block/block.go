@@ -1,4 +1,4 @@
-package raw_block
+package bitcoin_block
 
 import (
 	"fmt"
@@ -11,12 +11,12 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/raw/block/",                       baseHandler)
-	rtr.HandleFunc("/raw/block/last",			        lastHandler)
-	rtr.HandleFunc("/raw/block/random",			       	randomHandler)
-	rtr.HandleFunc("/raw/block/{hash:[0-9a-f]{64}}",	blockHandler)
+	rtr.HandleFunc("/bitcoin/block/",                       baseHandler)
+	rtr.HandleFunc("/bitcoin/block/last",			        lastHandler)
+	rtr.HandleFunc("/bitcoin/block/random",			       	randomHandler)
+	rtr.HandleFunc("/bitcoin/block/{hash:[0-9a-f]{64}}",	blockHandler)
 
-	http.Handle("/raw/block/", rtr)
+	http.Handle("/bitcoin/block/", rtr)
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {

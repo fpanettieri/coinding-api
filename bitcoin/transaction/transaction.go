@@ -1,4 +1,4 @@
-package raw_transaction
+package bitcoin_transaction
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/raw/transaction/",                                   baseHandler)
-	rtr.HandleFunc("/raw/transaction/random",			                        randomHandler)
-	rtr.HandleFunc("/raw/transaction/{hash:[a-fA-F0-9]{64}}",             transactionHandler)
-	rtr.HandleFunc("/raw/transaction/{hash:[a-fA-F0-9]{64}}/confidence",  confidenceHandler)
-	rtr.HandleFunc("/raw/transaction/{hash:[a-fA-F0-9]{64}}/hex",         hexHandler)
+	rtr.HandleFunc("/bitcoin/transaction/",                                   baseHandler)
+	rtr.HandleFunc("/bitcoin/transaction/random",			                  randomHandler)
+	rtr.HandleFunc("/bitcoin/transaction/{hash:[a-fA-F0-9]{64}}",             transactionHandler)
+	rtr.HandleFunc("/bitcoin/transaction/{hash:[a-fA-F0-9]{64}}/confidence",  confidenceHandler)
+	rtr.HandleFunc("/bitcoin/transaction/{hash:[a-fA-F0-9]{64}}/hex",         hexHandler)
 
-	http.Handle("/raw/transaction/", rtr)
+	http.Handle("/bitcoin/transaction/", rtr)
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {

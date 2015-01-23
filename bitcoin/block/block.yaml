@@ -1,9 +1,9 @@
 application: coinding-v4
-module: transaction
+module: block
 version: 0
 runtime: go
 api_version: go1
 
 handlers:
-- url: /raw/transaction/.*
+- url: /bitcoin/block/.*
   script: _go_app

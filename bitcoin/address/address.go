@@ -1,4 +1,4 @@
-package raw_address
+package bitcoin_address
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/raw/address/",                                                     baseHandler)
-	rtr.HandleFunc("/raw/address/random",			                                    randomHandler)
-	rtr.HandleFunc("/raw/address/{hash:[13][a-km-zA-HJ-NP-Z0-9]{26,33}}",               addressHandler)
-	rtr.HandleFunc("/raw/address/{hash:[13][a-km-zA-HJ-NP-Z0-9]{26,33}}/transactions",  transactionsHandler)
-	rtr.HandleFunc("/raw/address/{hash:[13][a-km-zA-HJ-NP-Z0-9]{26,33}}/unspents",      unspentsHandler)
+	rtr.HandleFunc("/bitcoin/address/",                                                     baseHandler)
+	rtr.HandleFunc("/bitcoin/address/random",			                                    randomHandler)
+	rtr.HandleFunc("/bitcoin/address/{hash:[13][a-km-zA-HJ-NP-Z0-9]{26,33}}",               addressHandler)
+	rtr.HandleFunc("/bitcoin/address/{hash:[13][a-km-zA-HJ-NP-Z0-9]{26,33}}/transactions",  transactionsHandler)
+	rtr.HandleFunc("/bitcoin/address/{hash:[13][a-km-zA-HJ-NP-Z0-9]{26,33}}/unspents",      unspentsHandler)
 
-	http.Handle("/raw/address/", rtr)
+	http.Handle("/bitcoin/address/", rtr)
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {

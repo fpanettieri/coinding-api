@@ -29,8 +29,30 @@ func init() {
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusBadRequest)
-	fmt.Fprint(w, r.URL.Path)
+	c := appengine.NewContext(r)
+
+    q := datastore.NewQuery("Developer").Project("Name")
+
+	var devs []Developer
+	if _, getErr := q.GetAll(c, &devs); getErr != nil {
+  		http.Error(w, getErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(w, "[")
+	for i, d := range devs {
+        fmt.Fprintf(w, "{name: %s}", d.Name)
+        if(i < len(devs) - 1){ fmt.Fprint(w, ",")}
+	}
+	fmt.Fprint(w, "]")
+}
+
+func nameUsed(w http.ResponseWriter, ctx appengine.Context, name string) bool {
+	count, err := datastore.NewQuery("Developer").Filter("Name =", name).KeysOnly().Count(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	return count > 0
 }
 
 func emailUsed(w http.ResponseWriter, ctx appengine.Context, email string) bool {
@@ -43,6 +65,12 @@ func emailUsed(w http.ResponseWriter, ctx appengine.Context, email string) bool 
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
+
+	name := r.FormValue("name")
+	if emailUsed(w, ctx, name) {
+  		http.Error(w, "Name already used", http.StatusInternalServerError)
+		return
+  	}
 
 	// Check email
 	email := r.FormValue("email")
@@ -60,6 +88,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create record
 	developer := &Developer{
+		Name: name,
         Email: email,
         Pass:  pass,
         Balance: 0,
@@ -132,7 +161,6 @@ func depositHandler(w http.ResponseWriter, r *http.Request) {
   		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
-
 
 func withdrawHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)

@@ -1,9 +1,9 @@
 application: coinding-v4
-module: address
+module: bitcoin
 version: 0
 runtime: go
 api_version: go1
 
 handlers:
-- url: /raw/address/.*
+- url: /bitcoin/.*
   script: _go_app
