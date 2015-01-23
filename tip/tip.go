@@ -16,9 +16,9 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/tip/", 		tipHandler)
-	rtr.HandleFunc("/tip/player", 	tipPlayerHandler)
-	rtr.HandleFunc("/tip/dev", 		tipDevHandler)
+	rtr.HandleFunc("/tip/player2player", 	player2playerHandler)
+	rtr.HandleFunc("/tip/dev2player", 		dev2playerHandler)
+	rtr.HandleFunc("/tip/player2dev", 		player2devHandler)
 
 	http.Handle("/tip/", rtr)
 }
@@ -34,7 +34,7 @@ func authPlayer(w http.ResponseWriter, r *http.Request, ctx appengine.Context) b
 	key := datastore.NewKey(ctx, "Player", stringId, 0, nil)
 
 	// Retrieve developer
-	if getErr := datastore.Get(ctx, key, player); getErr != nil {
+	if getErr := datastore.Get(ctx, key, &player); getErr != nil {
         http.Error(w, getErr.Error(), http.StatusUnauthorized)
         return false
     }
@@ -59,7 +59,7 @@ func authDev(w http.ResponseWriter, r *http.Request, ctx appengine.Context) bool
 	key := datastore.NewKey(ctx, "Developer", stringId, 0, nil)
 
 	// Retrieve developer
-	if getErr := datastore.Get(ctx, key, dev); getErr != nil {
+	if getErr := datastore.Get(ctx, key, &dev); getErr != nil {
         http.Error(w, getErr.Error(), http.StatusUnauthorized)
         return false
     }
@@ -74,7 +74,7 @@ func authDev(w http.ResponseWriter, r *http.Request, ctx appengine.Context) bool
 	return true
 }
 
-func tipHandler(w http.ResponseWriter, r *http.Request) {
+func player2playerHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	if !authPlayer(w, r, ctx) { return }
@@ -122,11 +122,12 @@ func tipHandler(w http.ResponseWriter, r *http.Request) {
     p1.Balance = p1.Balance - amount
     p2.Balance = p2.Balance + amount
 
-    datastore.Put(ctx, p1Key, p1)
-    datastore.Put(ctx, p2Key, p2)
+    
+	datastore.Put(ctx, p1Key, &p1)
+	datastore.Put(ctx, p2Key, &p2)
 }
 
-func tipPlayerHandler(w http.ResponseWriter, r *http.Request) {
+func dev2playerHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	if !authDev(w, r, ctx) { return }
@@ -174,11 +175,11 @@ func tipPlayerHandler(w http.ResponseWriter, r *http.Request) {
     dev.Balance = dev.Balance - amount
     player.Balance = player.Balance + amount
 
-    datastore.Put(ctx, devKey, dev)
-    datastore.Put(ctx, playerKey, player)
+    datastore.Put(ctx, devKey, &dev)
+    datastore.Put(ctx, playerKey, &player)
 }
 
-func tipDevHandler(w http.ResponseWriter, r *http.Request) {
+func player2devHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	if !authPlayer(w, r, ctx) { return }
@@ -187,6 +188,12 @@ func tipDevHandler(w http.ResponseWriter, r *http.Request) {
 	var player Player
 	playerId := base64.StdEncoding.EncodeToString([]byte("player-" + r.FormValue("name")))
 	playerKey := datastore.NewKey(ctx, "Player", playerId, 0, nil)
+
+	// Retrieve player
+	if getErr := datastore.Get(ctx, playerKey, &player); getErr != nil {
+        http.Error(w, getErr.Error(), http.StatusUnauthorized)
+        return
+    }
 
 	amount, parseErr := strconv.ParseFloat(r.FormValue("amount"), 64)
 	if parseErr != nil {
@@ -229,6 +236,6 @@ func tipDevHandler(w http.ResponseWriter, r *http.Request) {
     player.Balance = player.Balance - amount
     dev.Balance = dev.Balance + amount
 
-    datastore.Put(ctx, playerKey, player)
-    datastore.Put(ctx, devKey, dev)
+    datastore.Put(ctx, playerKey, &player)
+    datastore.Put(ctx, devKey, &dev)
 }
