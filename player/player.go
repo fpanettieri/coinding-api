@@ -39,6 +39,8 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	fmt.Fprint(w, "[")
 	for i, p := range players {
         fmt.Fprintf(w, "{name: %s}", p.Name)
@@ -76,7 +78,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	player := &Player{
         Name: name,
         Pass: pass,
-        Balance: 0,
+        Balance: PLAYER_FUNDS,
     }
 
     // FIXME: using only a base64 looks bad, but we need to get this out fast
@@ -134,6 +136,7 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 	var player Player
 	if !authPlayer(w, r, ctx, &player) { return }
 	
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "{name: %s, balance: %f}", player.Name, player.Balance)
 }
 

@@ -27,24 +27,27 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 
 func randomHandler(w http.ResponseWriter, r *http.Request) {
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s", "addresses", "17x23dNjXJLzGMev6R63uyRhMWP1VHawKc"), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }
 
 func addressHandler(w http.ResponseWriter, r *http.Request) { 
 	params := mux.Vars(r)
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s", "addresses", params["hash"]), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }
 
 func transactionsHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s/transactions", "addresses", params["hash"]), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }
 
 func unspentsHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s/unspents", "addresses", params["hash"]), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }

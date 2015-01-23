@@ -30,6 +30,8 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	
 	fmt.Fprint(w, "[")
 	for i, g := range games {
         fmt.Fprintf(w, "{name: %s, dev: %s, url: %s}", g.Name, g.Developer, g.Url)

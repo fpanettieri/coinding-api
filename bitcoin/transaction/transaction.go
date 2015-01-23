@@ -21,29 +21,34 @@ func init() {
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusBadRequest)
-	fmt.Fprint(w, r.URL.Path)
+	url := chain.ChainUrl(fmt.Sprintf("%s/%s", "transactions", "f5e26c8b82401c585235c572ba8265f16f7d9304ed8e31c198eab571754f5331"), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
+	chain.ForwardRequest(url, w, r)
 }
 
 func randomHandler(w http.ResponseWriter, r *http.Request) {
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s", "transactions", "f5e26c8b82401c585235c572ba8265f16f7d9304ed8e31c198eab571754f5331"), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }
 
 func transactionHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s", "transactions", params["hash"]), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }
 
 func confidenceHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s/confidence", "transactions", params["hash"]), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }
 
 func hexHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	url := chain.ChainUrl(fmt.Sprintf("%s/%s/hex", "transactions", params["hash"]), CHAIN_KEY)
+	w.Header().Set("Content-Type", "application/json")
 	chain.ForwardRequest(url, w, r)
 }

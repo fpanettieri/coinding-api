@@ -30,8 +30,9 @@ func init() {
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
+	q := datastore.NewQuery("Developer").Project("Name")
 
-    q := datastore.NewQuery("Developer").Project("Name")
+    w.Header().Set("Content-Type", "application/json")
 
 	var devs []Developer
 	if _, getErr := q.GetAll(c, &devs); getErr != nil {
@@ -91,7 +92,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		Name: name,
         Email: email,
         Pass:  pass,
-        Balance: 0,
+        Balance: DEV_FUNDS,
     }
 
     // FIXME: using only a base64 looks bad, but we need to get this out fast
@@ -149,6 +150,7 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 	var dev Developer
 	if !authDev(w, r, ctx, &dev) { return }
 	
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "{email: %s, balance: %f}", dev.Email, dev.Balance)
 }
 
