@@ -13,8 +13,8 @@ import (
 func init() {
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/game/",	baseHandler)
-	rtr.HandleFunc("/game/new",	newHandler)
+	rtr.HandleFunc("/game/",			baseHandler)
+	rtr.HandleFunc("/game/register",	registerHandler)
 
 	http.Handle("/game/", rtr)
 }
@@ -40,7 +40,7 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "]")
 }
 
-func newHandler(w http.ResponseWriter, r *http.Request) {
+func registerHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	name := r.FormValue("name")

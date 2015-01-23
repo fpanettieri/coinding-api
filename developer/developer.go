@@ -21,7 +21,6 @@ func init() {
 	rtr.HandleFunc("/developer/", 				baseHandler)
 	rtr.HandleFunc("/developer/register", 		registerHandler)
 	rtr.HandleFunc("/developer/balance", 		balanceHandler)
-	rtr.HandleFunc("/developer/deposit", 		depositHandler)
 	rtr.HandleFunc("/developer/withdraw", 		withdrawHandler)
 	rtr.HandleFunc("/developer/coinbase", 		coinbaseHandler)
 
@@ -151,17 +150,7 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 	if !authDev(w, r, ctx, &dev) { return }
 	
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "{email: %s, balance: %f}", dev.Email, dev.Balance)
-}
-
-func depositHandler(w http.ResponseWriter, r *http.Request) {
-	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
-	depositParams := coinbase.TransactionParams{ To: r.FormValue("email"), From: "api@coinding.com", Amount: r.FormValue("amount") }
-	_, err := coinbs.RequestMoney(&depositParams)
-	
-	if err != nil {
-  		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	fmt.Fprintf(w, "{name: %s, email: %s, address: %s, balance: %f}", dev.Name, dev.Email, dev.Address, dev.Balance)
 }
 
 func withdrawHandler(w http.ResponseWriter, r *http.Request) {
@@ -198,7 +187,7 @@ func withdrawHandler(w http.ResponseWriter, r *http.Request) {
     // Withdraw money
     amountStr := strconv.FormatFloat(amount, 'f', 8, 64)
 	coinbs := coinbase.ApiKeyClient(COINBASE_KEY, COINBASE_SECRET)
-	depositParams := coinbase.TransactionParams{ To: r.FormValue("destination"), From: dev.Email, Amount: amountStr, Notes: "Sent via Coinding" }
+	depositParams := coinbase.TransactionParams{ To: r.FormValue("to"), From: dev.Email, Amount: amountStr, Notes: "Sent via Coinding" }
 
 	_, err := coinbs.SendMoney(&depositParams)
 	

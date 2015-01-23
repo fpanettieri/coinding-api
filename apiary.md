@@ -25,16 +25,139 @@ These services allow you to manage a game developer account.
 Returns a list with the name of registered developers.
 + Response 200 (application/json)
 
-        
+        [{name: Capybara Games},{name: Eric Chahi},{name: Ralph Baer},{name: Ron Gilbert},{name: Steve Feak},{name: Team Meat},{name: Yuji Horii}]
+
+## Register Developer [/developer/register{?name,email,pass}]
+### Create new Developer [POST]
+Creates a new developer account
+
++ Parameters
+    + name (required, string, `John Dev`) ... Name of the game developer.
+    + email (required, string, `some@email.com`) ... Contact email.
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Account password. It is stored encripted but we recommend that you hash it, to avoid transfering it as plain text.
+
++ Response 200
+
+## Get Balance [/developer/balance{?email,pass}]
+### Retrieve Developer Balance [GET]
+Authenticated resource which returns the current balance of the developer in Bitcoins
+
++ Parameters
+    + email (required, string, `some@email.com`) ... Developer email
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Used to authorize the request
+
++ Response 200 (application/json)
+
+        {name: Eric Chahi, email: eric@chahi.com, address: 13jsKDJz2MmvxjuVqiS5KmTA8vCwDkPUj9, balance: 1.75}
+
+## Withdraw funds [/developer/withdraw{?email,pass,amount,to}]
+### Withdraw Developer Funds [GET]
+Authenticated resource which lets you send money to an email or bitcoin address.
+
++ Parameters
+    + email (required, string, `some@email.com`) ... Developer email
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Used to authorize the request
+    + amount (required, float, `0.4`) ... A string amount that will be converted to BTC, such as 1 or 1.234567. Also must be >= 0.01 or it will shown an error
+    + to (required, string, `13jsKDJz2MmvxjuVqiS5KmTA8vCwDkPUj9`) ... An email address or a bitcoin address
+
++ Response 200
 
 # Group Game
 Basic game management
 
+## List Games [/game]
+### Get all Games [GET]
+Returns a list with the name of registered games.
++ Response 200 (application/json)
+
+        [{name: Flappy bits, dev: Anonymous LLC., url: http://flappybits.com},{name: Dancing Disco Ball, dev: Paul, url: http://somegame.com},{name: Super Monkey Ball, dev: John Romero, url: http://supermonkeyball.com}]
+
+## Register Game [/developer/register{?name,dev,url}]
+### Create new Game [POST]
+Adds a new game to the network
+
++ Parameters
+    + name (required, string, `Flappy bits`) ... Name of the game developer.
+    + dev (required, string, `Anonymous LLC.`) ... Developer name.
+    + url (required, string, `http://flappybits.com`) ... URL where the game can be located
+
++ Response 200
+
 # Group Player
-These services allow you to manage a game developer account.
+These services allow you to manage a gamer account.
+
+## Register Player [/player/register{?name,pass}]
+### Create new Player [POST]
+Creates a new player account
+
++ Parameters
+    + name (required, string, `Gu Li`) ... Name of the player
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Account password. It is stored encripted but we recommend you to hash it, to avoid transfering it as plain text
+
++ Response 200
+
+## Get Balance [/player/balance{?name,pass}]
+### Retrieve Player Balance [GET]
+Authenticated resource which returns the current balance of the player in Bitcoins
+
++ Parameters
+    + name (required, string, `Monto Cavasini`) ... Player name
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Used to authorize the request
+
++ Response 200 (application/json)
+
+        {name: Monto Cavasini, address: 13jsKDJz2MmvxjuVqiS5KmTA8vCwDkPUj9, balance: 4.20}
+
+## Withdraw funds [/player/withdraw{?name,pass,amount,to}]
+### Withdraw Developer Funds [GET]
+Authenticated resource which lets you send money to an email or bitcoin address.
+
++ Parameters
+    + name (required, string, `Monto Cavasini`) ... Player name
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Used to authorize the request
+    + amount (required, float, `0.04`) ... A string amount that will be converted to BTC, such as 1 or 1.234567. Also must be >= 0.01 or it will shown an error
+    + to (required, string, `13jsKDJz2MmvxjuVqiS5KmTA8vCwDkPUj9`) ... An email address or a bitcoin address
+
++ Response 200
 
 # Group Tip
 These services allow you to send bitcoins between the players and developers
+
+## Tip [/tip{?name,pass,amount,to}]
+### Player Tip Player [GET]
+Authenticated resource which allows a player send money to another player
+
++ Parameters
+    + name (required, string, `Lola Garcia`) ... Player name
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Used to authorize the request
+    + amount (required, float, `0.04`) ... A string amount that will be converted to BTC, such as 1 or 0.00001. It can be any amount
+    + to (required, string, `Lucky John`) ... Name of the player that will receive the tip
+
++ Response 200
+
+## Tip [/tip/dev{?name,pass,amount,to}]
+### Player Tip Developer [GET]
+Authenticated resource which allows a player send money to a game developer
+
++ Parameters
+    + name (required, string, `Lola Garcia`) ... Player name
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Used to authorize the request
+    + amount (required, float, `0.04`) ... A string amount that will be converted to BTC, such as 1 or 0.00001. It can be any amount
+    + to (required, string, `Lucky John`) ... Name of the developer that will receive the tip
+
++ Response 200
+
+## Tip [/tip/player{?email,pass,amount,to}]
+### Developer Tip Player [GET]
+Authenticated resource which allows a developer send money to a player
+
++ Parameters
+    + email (required, string, `game@dev.com`) ... Developer email
+    + pass (required, string, `30565d8712bad1d13fb10133c5f0cd60`) ... Used to authorize the request
+    + amount (required, float, `0.04`) ... A string amount that will be converted to BTC, such as 1 or 0.00001. It can be any amount
+    + to (required, string, `Lucky John`) ... Name of the player that will receive the tip
+
++ Response 200
 
 # Group Bitcoin
 These services allow simple access to blockchain data
